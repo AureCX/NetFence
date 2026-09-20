@@ -1,3 +1,4 @@
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Action {
     Allow,
     Block,
@@ -8,7 +9,7 @@ pub struct Rule {
     pub action: Action,
 }
 
-pub fn matches(pattern: &str, domain: &str) -> bool {
+pub fn matches_url(pattern: &str, domain: &str) -> bool {
     // wildcard matching
     let mut ipat: usize = 0;  // Index for both input &str's in upper loop
     let mut idom: usize;      // Index for tame &str, used in lower loop
@@ -143,16 +144,59 @@ pub fn matches(pattern: &str, domain: &str) -> bool {
 }
 
 pub fn check_domain(domain: &str, rules: &[Rule]) -> Action {
-    Action::Block
-}
-
-pub fn check_for_match(input: &str) -> i32 {
-    let blocked_domains = vec!["example.com", "testsite.org", "malicious.net", "*test.com", "*website*.com"];
-    for domain in blocked_domains {
+    for rule in rules {
         // Placeholder for actual matching logic
-        if matches(domain, input) {
-            return 1; // Match found
+        if matches_url(&rule.pattern, domain)  {
+            return rule.action; // Match found
         }
     }
-    return 0;
+    Action::Allow // No match found
+}
+
+pub fn check_for_match(input: &str) -> Action {
+    let rules = vec![
+        Rule {
+            pattern: "example.com".to_string(),
+            action: Action::Block,
+        },
+        Rule {
+            pattern: "google.com".to_string(),
+            action: Action::Allow,
+        },
+        Rule {
+            pattern: "*malicious*".to_string(),
+            action: Action::Block,
+        },
+        Rule {
+            pattern: "*test.com".to_string(),
+            action: Action::Block,
+        },
+    ];
+    check_domain(input, &rules)
+}
+
+mod tests {
+    use crate::filter::{matches_url, check_domain, Action, Rule};
+    #[test]
+    fn test_matches_example() {
+        assert_eq!(matches_url("example.com", "example.com"), true);
+    }
+    #[test]
+    fn test_matches_www() {
+        assert_eq!(matches_url("example.com", "www.example.com"), false);
+    }
+    #[test]
+    fn test_matches_wildcard() {
+        assert_eq!(matches_url("*", "example.com"), true);
+    }
+    #[test]
+fn test_check_domain() {
+    let rules = vec![
+        Rule {
+            pattern: "*test.com".to_string(),
+            action: Action::Block,
+        },
+    ];
+    assert_eq!(check_domain("www.test.com", &rules), Action::Block);
+}
 }
