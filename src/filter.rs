@@ -7,6 +7,7 @@ pub enum Action {
 pub struct Rule {
     pub pattern: String,
     pub action: Action,
+    pub priority: u32,
 }
 
 pub fn matches_url(pattern: &str, domain: &str) -> bool {
@@ -144,13 +145,20 @@ pub fn matches_url(pattern: &str, domain: &str) -> bool {
 }
 
 pub fn check_domain(domain: &str, rules: &[Rule]) -> Action {
+    let mut final_priority: u32 = 0;
+    let mut final_action = Action::Allow;
+    let mut found_match = false;
+
     for rule in rules {
-        // Placeholder for actual matching logic
-        if matches_url(&rule.pattern, domain)  {
-            return rule.action; // Match found
+        if matches_url(&rule.pattern, domain)
+            && (!found_match || rule.priority > final_priority)
+        {
+            final_priority = rule.priority;
+            final_action = rule.action;
+            found_match = true;
         }
     }
-    Action::Allow // No match found
+    final_action
 }
 
 pub fn check_for_match(input: &str) -> Action {
@@ -158,23 +166,28 @@ pub fn check_for_match(input: &str) -> Action {
         Rule {
             pattern: "example.com".to_string(),
             action: Action::Block,
+            priority: 4
         },
         Rule {
             pattern: "google.com".to_string(),
             action: Action::Allow,
+            priority: 1
         },
         Rule {
             pattern: "*malicious*".to_string(),
             action: Action::Block,
+            priority: 3
         },
         Rule {
             pattern: "*test.com".to_string(),
             action: Action::Block,
+            priority: 2
         },
     ];
     check_domain(input, &rules)
 }
 
+#[cfg(test)]
 mod tests {
     use crate::filter::{matches_url, check_domain, Action, Rule};
     #[test]
@@ -195,8 +208,112 @@ fn test_check_domain() {
         Rule {
             pattern: "*test.com".to_string(),
             action: Action::Block,
+            priority: 1,
         },
     ];
     assert_eq!(check_domain("www.test.com", &rules), Action::Block);
+}
+#[test]
+fn test_check_domain_no_match() {
+    let rules = vec![
+        Rule {
+            pattern: "example.com".to_string(),
+            action: Action::Block,
+            priority: 100,
+        },
+    ];
+
+    assert_eq!(check_domain("google.com", &rules), Action::Allow);
+}
+
+#[test]
+fn test_check_domain_single_match() {
+    let rules = vec![
+        Rule {
+            pattern: "example.com".to_string(),
+            action: Action::Block,
+            priority: 100,
+        },
+    ];
+
+    assert_eq!(check_domain("example.com", &rules), Action::Block);
+}
+
+#[test]
+fn test_check_domain_higher_priority_wins() {
+    let rules = vec![
+        Rule {
+            pattern: "*example.com".to_string(),
+            action: Action::Block,
+            priority: 100,
+        },
+        Rule {
+            pattern: "google.example.com".to_string(),
+            action: Action::Allow,
+            priority: 200,
+        },
+    ];
+
+    assert_eq!(
+        check_domain("google.example.com", &rules),
+        Action::Allow
+    );
+}
+
+#[test]
+fn test_check_domain_lower_priority_does_not_override() {
+    let rules = vec![
+        Rule {
+            pattern: "google.example.com".to_string(),
+            action: Action::Allow,
+            priority: 200,
+        },
+        Rule {
+            pattern: "*example.com".to_string(),
+            action: Action::Block,
+            priority: 100,
+        },
+    ];
+
+    assert_eq!(
+        check_domain("google.example.com", &rules),
+        Action::Allow
+    );
+}
+
+#[test]
+fn test_check_domain_equal_priority_first_rule_wins() {
+    let rules = vec![
+        Rule {
+            pattern: "*example.com".to_string(),
+            action: Action::Block,
+            priority: 100,
+        },
+        Rule {
+            pattern: "google.example.com".to_string(),
+            action: Action::Allow,
+            priority: 100,
+        },
+    ];
+
+    assert_eq!(
+        check_domain("google.example.com", &rules),
+        Action::Block
+    );
+}
+#[test]
+fn test_check_domain_priority_zero() {
+    let rules = vec![
+        Rule {
+            pattern: "example.com".to_string(),
+            action: Action::Block,
+            priority: 0,
+        },
+    ];
+
+    assert_eq!(
+        check_domain("example.com", &rules),
+        Action::Block
+    );
 }
 }
