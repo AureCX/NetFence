@@ -182,7 +182,10 @@ pub fn check_for_match(input: &str) -> Result<Action, Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::filter::{matches_url, check_domain, Action, Rule};
+    use super::*;
+
+    // Test cases for matches_url function
+
     #[test]
     fn test_matches_example() {
         assert_eq!(matches_url("example.com", "example.com"), true);
@@ -329,5 +332,50 @@ fn test_check_domain_same_rule_same_priority() {
         check_domain("example.com", &rules),
         Action::Block
     );
+}
+
+// Test cases for parse_rules_json function
+
+#[test]
+fn test_parse_rules_json() {
+    let rules = parse_rules_json("rules.json").unwrap();
+
+    assert!(!rules.is_empty());
+
+    let example_rule = rules
+        .iter()
+        .find(|rule| rule.pattern == "example.com")
+        .unwrap();
+
+    assert_eq!(example_rule.action, Action::Block);
+    assert_eq!(example_rule.priority, 100);
+}
+
+#[test]
+fn test_parse_rules_json_missing_file() {
+    let result = parse_rules_json("this_file_does_not_exist.json");
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_check_for_match_blocked_domain() {
+    let result = check_for_match("example.com");
+
+    assert_eq!(result.unwrap(), Action::Block);
+}
+
+#[test]
+fn test_check_for_match_allowed_domain() {
+    let result = check_for_match("google.com");
+
+    assert_eq!(result.unwrap(), Action::Allow);
+}
+
+#[test]
+fn test_check_for_match_priority() {
+    let result = check_for_match("google.example.com");
+
+    assert_eq!(result.unwrap(), Action::Allow);
 }
 }
