@@ -316,4 +316,25 @@ fn test_check_domain_priority_zero() {
         Action::Block
     );
 }
+
+#[test]
+fn test_check_domain_same_rule_same_priority() {
+    let rules = vec![
+        Rule {
+            pattern: "example.com".to_string(),
+            action: Action::Block,
+            priority: 100,
+        },
+        Rule {
+            pattern: "example.com".to_string(),
+            action: Action::Allow,
+            priority: 100,
+        },
+    ];
+
+    assert_eq!(
+        check_domain("example.com", &rules),
+        Action::Block
+    );
+}
 }
