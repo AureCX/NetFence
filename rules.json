@@ -1,0 +1,47 @@
+[
+    {
+        "pattern": "example.com",
+        "action": "Block",
+        "priority": 100
+    },
+    {
+        "pattern": "*.social.example.com",
+        "action": "Block",
+        "priority": 100
+    },
+    {
+        "pattern": "*youtube*",
+        "action": "Block",
+        "priority": 100
+    },
+    {
+        "pattern": "*facebook*",
+        "action": "Block",
+        "priority": 100
+    },
+    {
+        "pattern": "*malware*",
+        "action": "Block",
+        "priority": 500
+    },
+    {
+        "pattern": "google.example.com",
+        "action": "Allow",
+        "priority": 200
+    },
+    {
+        "pattern": "youtube.com",
+        "action": "Allow",
+        "priority": 200
+    },
+    {
+        "pattern": "*test.com",
+        "action": "Block",
+        "priority": 50
+    },
+    {
+        "pattern": "trusted.test.com",
+        "action": "Allow",
+        "priority": 100
+    }
+]

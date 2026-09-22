@@ -1,9 +1,15 @@
-#[derive(PartialEq, Debug, Clone, Copy)]
+use serde::{Serialize, Deserialize};
+use std::fs::File;
+use std::io::BufReader;
+use std::error::Error;
+
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
 pub enum Action {
     Allow,
     Block,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Rule {
     pub pattern: String,
     pub action: Action,
@@ -161,30 +167,17 @@ pub fn check_domain(domain: &str, rules: &[Rule]) -> Action {
     final_action
 }
 
-pub fn check_for_match(input: &str) -> Action {
-    let rules = vec![
-        Rule {
-            pattern: "example.com".to_string(),
-            action: Action::Block,
-            priority: 4
-        },
-        Rule {
-            pattern: "google.com".to_string(),
-            action: Action::Allow,
-            priority: 1
-        },
-        Rule {
-            pattern: "*malicious*".to_string(),
-            action: Action::Block,
-            priority: 3
-        },
-        Rule {
-            pattern: "*test.com".to_string(),
-            action: Action::Block,
-            priority: 2
-        },
-    ];
-    check_domain(input, &rules)
+pub fn parse_rules_json(json_file: &str) -> Result<Vec<Rule>, Box<dyn Error>> {
+    let file = File::open(json_file)?;
+    let reader = BufReader::new(file);
+    let rules: Vec<Rule> = serde_json::from_reader(reader)?;
+    Ok(rules)
+}
+
+pub fn check_for_match(input: &str) -> Result<Action, Box<dyn Error>> {
+    
+    let rules = parse_rules_json("rules.json")?;
+    Ok(check_domain(input, &rules))
 }
 
 #[cfg(test)]

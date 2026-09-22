@@ -1,7 +1,6 @@
 mod filter;
 use std::env;
-
-use crate::filter::Action::Block;
+use crate::filter::Action;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -9,9 +8,15 @@ fn main() {
         return;
     }
     let result = filter::check_for_match(args[1].as_str());
-    if result == Block {
-        println!("Not allowed!")
-    } else {
-        println!("Allowed!")
+    match result {
+        Ok(Action::Block) => {
+            println!("Not allowed!");
+        }
+        Ok(Action::Allow) => {
+            println!("Allowed!");
+        }
+        Err(error) => {
+            eprintln!("Failed to load rules: {}", error);
+        }
     }
 }
