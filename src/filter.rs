@@ -177,7 +177,25 @@ pub fn parse_rules_json(json_file: &str) -> Result<Vec<Rule>, Box<dyn Error>> {
 pub fn check_for_match(input: &str) -> Result<Action, Box<dyn Error>> {
     
     let rules = parse_rules_json("rules.json")?;
+    
     Ok(check_domain(input, &rules))
+}
+
+pub fn check_if_allowed(input: &str) -> i32 {
+    let action = check_for_match(input);
+
+    if input.is_empty() {
+        println!("No domain provided to check.");
+        return -1;
+    }
+    if action.as_ref().unwrap() == &Action::Block {
+        println!("Not allowed!");
+    } else if action.as_ref().unwrap() == &Action::Allow {
+        println!("Allowed!");
+    } else {
+        eprintln!("Failed to load rules: {}", action.unwrap_err());
+    }
+    return 0;
 }
 
 #[cfg(test)]
