@@ -1,6 +1,6 @@
 mod filter;
 use std::env;
-use crate::filter::check_if_allowed;
+use crate::filter::{check_if_allowed, parse_rules_json, Action, Rule};
 use std::fs;
 
 static COMMANDS: &[(&str, fn(&str) -> i32)] = &[
@@ -32,6 +32,39 @@ fn add_command(command: &str) -> i32 {
         println!("No domain provided to add.");
         return -1;
     }
+    // Load existing rules
+    let mut rules = match parse_rules_json("rules.json") {
+        Ok(rules) => rules,
+        Err(error) => {
+            eprintln!("Failed to load rules: {}", error);
+            return -1;
+        }
+    };
+    // Avoid adding the same Allow rule twice
+    if rules.iter().any(|rule|rule.pattern == command && rule.action == Action::Allow) {
+        println!("Domain '{}' is already allowed.", command);
+        return 0;
+    }
+    // Create and add the new rule
+    let new_rule = Rule {
+        pattern: command.to_string(),
+        action: Action::Allow,
+        priority: 200,
+    };
+    rules.push(new_rule);
+    // Convert the updated rules back into JSON
+    let json = match serde_json::to_string_pretty(&rules) {
+        Ok(json) => json,
+        Err(error) => {
+            eprintln!("Failed to serialize rules: {}", error);
+            return -1;
+        }
+    };
+    // Write the updated JSON to the file
+    if let Err(error) = fs::write("rules.json", json) {
+        eprintln!("Failed to save rules: {}", error);
+        return -1;
+    }
     println!("Domain '{}' added successfully.", command);
     0
 }
@@ -42,7 +75,33 @@ fn remove_command(command: &str) -> i32 {
         println!("No domain provided to remove.");
         return -1;
     }
-    println!("Domain '{}' removed successfully.", command);
+    let mut rules = match parse_rules_json("rules.json") {
+        Ok(rules) => rules,
+        Err(error) => {
+            eprintln!("Failed to load rules: {}", error);
+            return -1;
+        }
+    };
+    // Avoid adding the same Allow rule twice
+    if rules.iter().any(|rule|rule.pattern == command && rule.action == Action::Allow) {
+        rules.retain(|rule| !(rule.pattern == command && rule.action == Action::Allow));
+        let json = match serde_json::to_string_pretty(&rules) {
+        Ok(json) => json,
+        Err(error) => {
+            eprintln!("Failed to serialize rules: {}", error);
+            return -1;
+         }
+        };
+        // Write the updated JSON to the file
+        if let Err(error) = fs::write("rules.json", json) {
+            eprintln!("Failed to save rules: {}", error);
+            return -1;
+        }
+        println!("Domain '{}' removed successfully.", command);
+        return 0;
+    }
+    // Convert the updated rules back into JSON
+    println!("Domain '{}' not found in the allowed list.", command);
     0
 }
 
