@@ -188,12 +188,17 @@ pub fn check_if_allowed(input: &str) -> i32 {
         println!("No domain provided to check.");
         return -1;
     }
-    if action.as_ref().unwrap() == &Action::Block {
-        println!("Not allowed!");
-    } else if action.as_ref().unwrap() == &Action::Allow {
-        println!("Allowed!");
-    } else {
-        eprintln!("Failed to load rules: {}", action.unwrap_err());
+    match action {
+        Ok(Action::Block) => {
+            println!("Not allowed!");
+        }
+        Ok(Action::Allow) => {
+            println!("Allowed!");
+        }
+        Err(error) => {
+            eprintln!("Failed to load rules: {}", error);
+            return -1;
+        }
     }
     return 0;
 }
@@ -395,5 +400,21 @@ fn test_check_for_match_priority() {
     let result = check_for_match("google.example.com");
 
     assert_eq!(result.unwrap(), Action::Allow);
+}
+
+    // Test cases for the big main functions
+#[test]
+fn test_check_if_allowed_empty_domain() {
+    assert_eq!(check_if_allowed(""), -1);
+}
+
+#[test]
+fn test_check_if_allowed_blocked_domain() {
+    assert_eq!(check_if_allowed("example.com"), 0);
+}
+
+#[test]
+fn test_check_if_allowed_allowed_domain() {
+    assert_eq!(check_if_allowed("google.com"), 0);
 }
 }
