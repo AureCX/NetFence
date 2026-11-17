@@ -1,9 +1,11 @@
 mod filter;
+mod helper;
 use std::env;
+use crate::helper::uppercase_first;
 use crate::filter::{check_if_allowed, parse_rules_json, Action, Rule};
-use std::fs;
+use std::{fs, process::ExitCode};
 
-static COMMANDS: &[(&str, fn(&str) -> i32)] = &[
+static COMMANDS: &[(&str, fn(&str) -> u8)] = &[
     ("check", check_if_allowed),
     ("add", add_command),
     ("remove", remove_command),
@@ -11,33 +13,18 @@ static COMMANDS: &[(&str, fn(&str) -> i32)] = &[
     ("view", view_command)
 ];
 
-fn uppercase_first(data: &str) -> String {
-    // Uppercase first letter.
-    let mut result = String::new();
-    let mut first = true;
-    for value in data.chars() {
-        if first {
-            result.push(value.to_ascii_uppercase());
-            first = false;
-        } else {
-            result.push(value);
-        }
-    }
-    result
-}
-
-fn add_command(command: &str) -> i32 {
+fn add_command(command: &str) -> u8 {
     // Implementation for adding a command
     if command.is_empty() {
         println!("No domain provided to add.");
-        return -1;
+        return 1;
     }
     // Load existing rules
     let mut rules = match parse_rules_json("rules.json") {
         Ok(rules) => rules,
         Err(error) => {
             eprintln!("Failed to load rules: {}", error);
-            return -1;
+            return 1;
         }
     };
     // Avoid adding the same Allow rule twice
@@ -57,29 +44,29 @@ fn add_command(command: &str) -> i32 {
         Ok(json) => json,
         Err(error) => {
             eprintln!("Failed to serialize rules: {}", error);
-            return -1;
+            return 1;
         }
     };
     // Write the updated JSON to the file
     if let Err(error) = fs::write("rules.json", json) {
         eprintln!("Failed to save rules: {}", error);
-        return -1;
+        return 1;
     }
     println!("Domain '{}' added successfully.", command);
     0
 }
 
-fn remove_command(command: &str) -> i32 {
+fn remove_command(command: &str) -> u8 {
     // Implementation for removing a command
     if command.is_empty() {
         println!("No domain provided to remove.");
-        return -1;
+        return 1;
     }
     let mut rules = match parse_rules_json("rules.json") {
         Ok(rules) => rules,
         Err(error) => {
             eprintln!("Failed to load rules: {}", error);
-            return -1;
+            return 1;
         }
     };
     // Avoid adding the same Allow rule twice
@@ -89,13 +76,13 @@ fn remove_command(command: &str) -> i32 {
         Ok(json) => json,
         Err(error) => {
             eprintln!("Failed to serialize rules: {}", error);
-            return -1;
+            return 1;
          }
         };
         // Write the updated JSON to the file
         if let Err(error) = fs::write("rules.json", json) {
             eprintln!("Failed to save rules: {}", error);
-            return -1;
+            return 1;
         }
         println!("Domain '{}' removed successfully.", command);
         return 0;
@@ -105,16 +92,17 @@ fn remove_command(command: &str) -> i32 {
     0
 }
 
-fn help_command(_command: &str) -> i32 {
+fn help_command(_command: &str) -> u8 {
     println!("Available commands:");
     println!("  check <domain>   - Check if the domain is allowed.");
     println!("  add <domain>     - Add a domain to the allowed list.");
     println!("  remove <domain>  - Remove a domain from the allowed list.");
+    println!("  view <action>    - View domains for a specific action (allow/block).");
     println!("  help          - Show this help message.");
     0
 }
 
-fn view_command(command: &str) -> i32 {
+fn view_command(command: &str) -> u8 {
     let file = fs::File::open("rules.json")
         .expect("File should open read only");
     let json: serde_json::Value = serde_json::from_reader(file)
@@ -129,9 +117,11 @@ fn view_command(command: &str) -> i32 {
             }
         }
     }
-    println!("{} Domains:", uppercase_first(&format!("{}ed", command)));
+    if !allowed_urls.is_empty() {
+        println!("{} Domains:", uppercase_first(&format!("{}ed", command)));
+    }
     if allowed_urls.is_empty() {
-        println!("  No allowed domains found.");
+        println!("  No domains found matching '{}', check ./NetFence --help for usage information.", command);
     } else {
         for url in allowed_urls {
             println!("  - {}", url);
@@ -140,16 +130,16 @@ fn view_command(command: &str) -> i32 {
     0
 }
 
-fn get_line_command() -> i32 {
+fn get_line_command() -> u8 {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
         println!("No command provided. Use --help for usage information.");
-        return -1;
+        return 1;
     }
     if args[1] == "--help" || args[1] == "-h" {
-        println!("Help requested.");
-        return -1;
+        help_command("");
+        return 0;
     }
     let command = args[1].clone();
     for &(cmd, _func) in COMMANDS {
@@ -157,17 +147,17 @@ fn get_line_command() -> i32 {
             return _func(args[2].as_str());
         } else if command == cmd && command == "help" {
             return _func("");
-        } else if command == cmd &&args.len() <= 2 {
+        } else if command == cmd && args.len() <= 2 {
             println!("No argument provided for command: {}", command);
-            return -1;
+            return 1;
         }
     }
     println!("Unknown command: {}", command);
-    return -1;
+    return 1;
 }
 
-fn main() {
-    get_line_command();
+fn main() -> ExitCode {
+    return ExitCode::from(get_line_command());
     // let result= ;
     // match result {
     //     Ok(Action::Block) => {

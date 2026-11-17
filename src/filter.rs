@@ -181,12 +181,12 @@ pub fn check_for_match(input: &str) -> Result<Action, Box<dyn Error>> {
     Ok(check_domain(input, &rules))
 }
 
-pub fn check_if_allowed(input: &str) -> i32 {
+pub fn check_if_allowed(input: &str) -> u8 {
     let action = check_for_match(input);
 
     if input.is_empty() {
         println!("No domain provided to check.");
-        return -1;
+        return 1;
     }
     match action {
         Ok(Action::Block) => {
@@ -197,7 +197,7 @@ pub fn check_if_allowed(input: &str) -> i32 {
         }
         Err(error) => {
             eprintln!("Failed to load rules: {}", error);
-            return -1;
+            return 1;
         }
     }
     return 0;
@@ -405,7 +405,7 @@ fn test_check_for_match_priority() {
     // Test cases for the big main functions
 #[test]
 fn test_check_if_allowed_empty_domain() {
-    assert_eq!(check_if_allowed(""), -1);
+    assert_eq!(check_if_allowed(""), 1);
 }
 
 #[test]
